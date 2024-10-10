@@ -1,4 +1,4 @@
-```markdown
+
 # Évaluateur et Typeur de λ-calcul
 
 ## Description
@@ -56,4 +56,3 @@ Les contributions sont les bienvenues ! Si vous souhaitez ajouter des fonctionna
 ## Licence
 
 Ce projet est sous licence MIT. Consultez le fichier LICENSE pour plus de détails.
-```
