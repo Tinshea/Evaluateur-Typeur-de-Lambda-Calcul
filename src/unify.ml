@@ -1,5 +1,6 @@
 (* unify.ml *)
 (* Ce fichier contient l'algorithme d'unification qui résout les équations générées par le typeur. *)
+open Types
 
 (* Substitution dans les types *)
 let rec subst_type (var : string) (t_sub : ptype) (t : ptype) : ptype =
@@ -8,7 +9,7 @@ let rec subst_type (var : string) (t_sub : ptype) (t : ptype) : ptype =
   | Arr (t1, t2) -> Arr (subst_type var t_sub t1, subst_type var t_sub t2)
   | _ -> t
 
-(* Unification des équations de typage *)
+(* Unification des équations de typage
 let rec unify (equations : (ptype * ptype) list) : (ptype * ptype) list =
   match equations with
   | [] -> []
@@ -18,4 +19,4 @@ let rec unify (equations : (ptype * ptype) list) : (ptype * ptype) list =
   | (Arr (t1, t2), Arr (t3, t4)) :: eqs ->
       unify ((t1, t3) :: (t2, t4) :: eqs)
   | (Var v, Var v') :: eqs when v = v' -> unify eqs
-  | _ -> failwith "Unification failed"
+  | _ -> failwith "Unification failed" *)

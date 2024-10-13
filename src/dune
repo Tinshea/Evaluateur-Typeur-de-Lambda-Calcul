@@ -1,0 +1,5 @@
+(executable
+ (name main)
+ (modules lambda types eval unify main)
+ (libraries unix))  ;;
+

@@ -1,6 +1,8 @@
 (* types.ml *)
 (* Ce fichier contient la définition des types simples et les fonctions associées pour générer les équations de typage à partir des termes. *)
 
+open Lambda
+
 (* Représentation des types simples *)
 type ptype = 
   | Var of string                (* Variable de type *)
