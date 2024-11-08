@@ -1,13 +1,8 @@
 (* types.ml *)
 (* Ce fichier contient la définition des types simples et les fonctions associées pour générer les équations de typage à partir des termes. *)
 
+open Syntax
 open Lambda
-
-(* Représentation des types simples *)
-type ptype = 
-  | Var of string                (* Variable de type *)
-  | Arr of ptype * ptype         (* Fonction T -> T *)
-  | Nat                          (* Type des entiers *)
 
 (* Environnement de typage *)
 type env = (string * ptype) list
@@ -20,8 +15,6 @@ let compteur_var_t = ref 0
 let nouvelle_var_t () = 
   compteur_var_t := !compteur_var_t + 1;
   "T" ^ string_of_int !compteur_var_t
-
-
 
 (* Fonction de recherche dans l'environnement *)
 let rec cherche_type (v : string) (e : env) : ptype =

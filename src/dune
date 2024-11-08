@@ -1,5 +1,17 @@
-(executable
- (name main)
- (modules lambda types eval unify main)
- (libraries unix))  ;;
+; Définition des bibliothèques nécessaires
+(library
+ (name lambda_calculus_lib)
+ (modules lambda types eval unify)
+ (libraries unix))
 
+; Exécutable pour `test_eval`
+(executable
+ (name test_eval)
+ (modules test_eval)
+ (libraries lambda_calculus_lib unix))
+
+; Exécutable pour `test_types`
+(executable
+ (name test_types)
+ (modules test_types)
+ (libraries lambda_calculus_lib unix))
