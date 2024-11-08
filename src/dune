@@ -1,17 +1,13 @@
-; Définition des bibliothèques nécessaires
-(library
- (name lambda_calculus_lib)
- (modules lambda types eval unify)
- (libraries unix))
+
 
 ; Exécutable pour `test_eval`
 (executable
  (name test_eval)
- (modules test_eval)
- (libraries lambda_calculus_lib unix))
+ (modules lambda syntax types eval unify test_eval)
+ (libraries unix))
 
 ; Exécutable pour `test_types`
 (executable
  (name test_types)
- (modules test_types)
- (libraries lambda_calculus_lib unix))
+ (modules lambda syntax types eval unify test_types)
+ (libraries unix))

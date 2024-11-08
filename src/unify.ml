@@ -1,11 +1,11 @@
 (* unify.ml *)
 (* Ce fichier contient l'algorithme d'unification qui résout les équations générées par le typeur. *)
-open Types
+open Syntax
 
 (* Substitution dans les types *)
 let rec subst_type (var : string) (t_sub : ptype) (t : ptype) : ptype =
   match t with
-  | Var v when v = var -> t_sub
+  | Tvar v when v = var -> t_sub
   | Arr (t1, t2) -> Arr (subst_type var t_sub t1, subst_type var t_sub t2)
   | _ -> t
 
