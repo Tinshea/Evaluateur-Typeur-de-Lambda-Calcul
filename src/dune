@@ -3,11 +3,11 @@
 ; Exécutable pour `test_eval`
 (executable
  (name test_eval)
- (modules lambda syntax types eval unify test_eval)
+ (modules lambda syntax types eval test_eval)
  (libraries unix))
 
 ; Exécutable pour `test_types`
 (executable
  (name test_types)
- (modules lambda syntax types eval unify test_types)
+ (modules lambda syntax types eval test_types)
  (libraries unix))
