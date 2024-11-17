@@ -3,9 +3,9 @@
 
 (* Représentation des termes du lambda-calcul *)
 type pterm = 
-  | Var of string               (* Variable *)
-  | App of pterm * pterm        (* Application *)
-  | Abs of string * pterm       (* Abstraction *)
+  | Var of string             
+  | App of pterm * pterm       
+  | Abs of string * pterm      
   | Int of int
   | Add of pterm * pterm
   | Sub of pterm * pterm
@@ -22,7 +22,9 @@ type pterm =
   | Deref of pterm
   | Assign of pterm * pterm
   | Address of int  
-
+  | Raise of pterm
+  | TryWith of pterm * pterm  
+  | Exn  
 (* Pretty-printer des termes *)
 let rec print_term (t : pterm) : string = 
   match t with
@@ -45,4 +47,7 @@ let rec print_term (t : pterm) : string =
   | Deref t -> "!" ^ (print_term t)
   | Assign (t1, t2) -> (print_term t1) ^ " := " ^ (print_term t2)
   | Address n -> "address " ^ (string_of_int n)
+  | Raise t -> "raise " ^ (print_term t)
+  | TryWith (t1, t2) -> "try " ^ (print_term t1) ^ " with " ^ (print_term t2)
+  | Exn -> "exception"
   

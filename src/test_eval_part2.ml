@@ -1,8 +1,8 @@
 (* test_eval.ml *)
 (* Ce fichier rassemble tout le projet. Il contient le programme principal pour tester l'évaluateur et le typeur. *)
 
-open Lambda  (* Module qui contient les définitions des termes *)
-open Eval    (* Module qui contient les fonctions d'évaluation *)
+open Lambda  
+open Eval   
 
 (* Définition des combinateurs et des encodages *)
 let i = Abs ("x", Var "x")

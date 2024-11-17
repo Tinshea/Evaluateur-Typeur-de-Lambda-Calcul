@@ -27,15 +27,15 @@ let rec cherche_type (v : string) (e : env) : ptype =
 (* Vérifie si un terme est non-expansif *)
 let rec is_nonexpansive (term : pterm) : bool =
   match term with
-  (* Non-expansive terms *)
+
   | Var _ -> true                
   | Int _ -> true               
   | Unit -> true                
   | Address _ -> true          
   | Abs _ -> true             
-  | List [] -> true          
+  | List [] -> true     
+  | Exn -> true     
 
-  (* Compound terms - non-expansive if subterms are non-expansive *)
   | Add (t1, t2) | Sub (t1, t2) | Cons (t1, t2) -> 
       is_nonexpansive t1 && is_nonexpansive t2
   | List terms -> 
@@ -43,10 +43,9 @@ let rec is_nonexpansive (term : pterm) : bool =
   | IfZero (t1, t2, t3) | IfEmpty (t1, t2, t3) ->
       is_nonexpansive t1 && is_nonexpansive t2 && is_nonexpansive t3
 
-  (* Always expansive terms *)
   | App _ | Ref _ | Deref _ | Assign _ | Fix _ | Head _ | Tail _ -> false
+  | Raise _ | TryWith _ -> false
 
-  (* Let bindings - expansive if e1 is expansive *)
   | Let (_, e1, _) -> is_nonexpansive e1
 
 (* Fonction de substitution d'une variable de type par un type dans un autre type *)
@@ -60,6 +59,7 @@ let rec substitue_type (v : string) (sub : ptype) (t : ptype) : ptype =
   | Nat -> t
   | TUnit -> t
   | RefType t1 -> RefType (substitue_type v sub t1)
+  | ExnType -> t
 
 (* Fonction de substitution d'une variable de type par un type dans un système d'équations *)
 let substitue_equa (v : string) (sub : ptype) (eqs : equa) : equa =
@@ -76,6 +76,7 @@ let rec occur_check (v : string) (t : ptype) : bool =
   | Nat -> false
   | TUnit -> false
   | RefType t -> occur_check v t
+  | ExnType -> false
 
 
 (* Fonction de renommage des variables de type liées (barendregtisation) *)
@@ -91,6 +92,7 @@ let rec barendregtisation (t : ptype) (env : (string * string) list) : ptype =
   | N -> N
   | TUnit -> TUnit
   | RefType t -> RefType (barendregtisation t env)
+  | ExnType -> ExnType
 
 
 (* Fonction pour ouvrir un type universel *)
@@ -191,8 +193,14 @@ let rec genere_equa t ty e =
       let t' = Tvar (nouvelle_var_t ()) in
       genere_equa t1 (RefType t') e @ genere_equa t2 t' e @ [(ty, TUnit)]
   | Address _ -> [(ty, N)]
+  | Raise t -> 
+      let t' = Tvar (nouvelle_var_t ()) in
+      genere_equa t t' e @ [(ty, ExnType)]
+  | TryWith (t1, t2) ->
+      let t' = Tvar (nouvelle_var_t ()) in
+      genere_equa t1 t' e @ genere_equa t2 ty e @ [(ExnType, ty)]
+  | Exn -> [(ty, ExnType)]
 
-(* Return both equations and substitutions *)
 and resout_systeme (eqs : equa) (timeout : float) : (equa * (string * ptype) list) option =
   let start_time = Unix.gettimeofday () in
   let rec loop eqs substitutions =
@@ -201,18 +209,17 @@ and resout_systeme (eqs : equa) (timeout : float) : (equa * (string * ptype) lis
     else
       try 
         match eqs with
-        | [] -> Some ([], substitutions)  (* Success - no more equations *)
+        | [] -> Some ([], substitutions)  
         | _ -> 
             let (remaining_eqs, new_subst) = unifie eqs substitutions in
             if remaining_eqs = eqs then
-              Some (remaining_eqs, new_subst)  (* No progress made *)
+              Some (remaining_eqs, new_subst)  
             else
-              loop remaining_eqs new_subst  (* Continue unification *)
+              loop remaining_eqs new_subst  
       with Failure _ -> None
   in
   loop eqs []
 
-(* Apply substitutions *)
 (* Modifie infer_type pour utiliser la généralisation faible *)
 and generalise (t : ptype) (e : env) : ptype =
   let env_vars = List.map fst e in
@@ -261,8 +268,8 @@ and variables_libres (t : ptype) : string list =
     | N -> []
     | TUnit -> []
     | RefType t -> collect t
+    | ExnType -> []
   in
-  (* Remove duplicates using sort_uniq *)
   List.sort_uniq String.compare (collect t)
 
 

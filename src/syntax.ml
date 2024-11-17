@@ -3,14 +3,15 @@
 
 (* Représentation des types simples *)
 type ptype = 
-  | Tvar of string                (* Variable de type *)
-  | Arr of ptype * ptype         (* Fonction T -> T *)
-  | N                            (* Type des entiers *)
-  | Listtype of ptype                (* Type des listes *)
-  | Forall of string * ptype     (* Type polymorphe *)
+  | Tvar of string                
+  | Arr of ptype * ptype        
+  | N                            
+  | Listtype of ptype                
+  | Forall of string * ptype    
   | Nat        
-  | TUnit                         (* Type unit *)
-  | RefType of ptype                (* Type référence *)
+  | TUnit                       
+  | RefType of ptype                
+  | ExnType
 
 let rec print_type (t : ptype) : string =
   match t with
@@ -22,3 +23,5 @@ let rec print_type (t : ptype) : string =
   | Nat -> "Nat"
   | TUnit -> "Unit"
   | RefType t -> "(" ^ (print_type t) ^ " ref)"
+  | ExnType -> "Exn"
+  

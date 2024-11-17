@@ -4,6 +4,9 @@
 open Lambda
 exception Timeout
 
+(* certaine logique comme l'alpha-conversion l'evalutation etc viennent de Christophe Deleuze : Lambda Calculus Evaluator in OCaml*)
+
+
 (* Fonction pour obtenir les variables libres d'un terme *)
 let rec fv t =
   match t with
@@ -26,6 +29,9 @@ let rec fv t =
   | Deref t -> fv t
   | Assign (t1, t2) -> fv t1 @ fv t2
   | Address _ -> []
+  | Exn -> []
+  | Raise e -> fv e
+  | TryWith (e1, e2) -> fv e1 @ fv e2
 
 (* Compteur pour générer des variables uniques *)
 let compteur_var = ref 0
@@ -42,17 +48,19 @@ let new_mem () : int =
   mem_counter := !mem_counter + 1;
   !mem_counter
 
-let rec is_value = function
+let rec verify = function
   | Int _ | Unit | Abs _ | Address _ -> true
-  | List l -> List.for_all is_value l
+  | List l -> List.for_all verify l
   | _ -> false
+
 (* Fonction de renommage *)
+
 let rec alphaconv (t : pterm) : pterm =
   match t with
-  | Var x -> Var x  (* Ne pas renommer les variables libres *)
+  | Var x -> Var x  
   | Abs (x, body) -> 
       let new_var = nouvelle_var () in  
-      let new_body = alphaconv (substitute body x new_var) in  (* Renommer dans le corps avec new_var*)
+      let new_body = alphaconv (substitute body x new_var) in  
       Abs (new_var, new_body) 
   | App (t1, t2) -> 
       let new_t1 = alphaconv t1 in  
@@ -74,16 +82,19 @@ let rec alphaconv (t : pterm) : pterm =
   | Deref t -> Deref (alphaconv t)
   | Assign (t1, t2) -> Assign (alphaconv t1, alphaconv t2)
   | Address n -> Address n
+  | Exn -> Exn
+  | Raise e -> Raise (alphaconv e)
+  | TryWith (e1, e2) -> TryWith (alphaconv e1, alphaconv e2)
       
 (* Remplacement des variables dans le corps *)
 and substitute (body : pterm) (old_var : string) (new_var : string) : pterm =
   match body with
-  | Var x when x = old_var -> Var new_var  (* Remplacer l'ancienne variable par la nouvelle *)
-  | Var x -> Var x  (* Garder les autres variables *)
-  | Abs (x, t) when x = old_var -> Abs (x, t)  (* Ne pas remplacer si c'est la variable liée *)
+  | Var x when x = old_var -> Var new_var  
+  | Var x -> Var x  
+  | Abs (x, t) when x = old_var -> Abs (x, t)  
   | Abs (x, t) -> 
-      let new_t = substitute t old_var new_var in  (* Remplacer dans le corps *)
-      Abs (x, new_t)  (* Garder l'abstraction *)
+      let new_t = substitute t old_var new_var in  
+      Abs (x, new_t) 
   | App (t1, t2) -> 
       let new_t1 = substitute t1 old_var new_var in  
       let new_t2 = substitute t2 old_var new_var in  
@@ -104,12 +115,15 @@ and substitute (body : pterm) (old_var : string) (new_var : string) : pterm =
   | Deref t -> Deref (substitute t old_var new_var)
   | Assign (t1, t2) -> Assign (substitute t1 old_var new_var, substitute t2 old_var new_var)
   | Address n -> Address n
+  | Exn -> Exn
+  | Raise e -> Raise (substitute e old_var new_var)
+  | TryWith (e1, e2) -> TryWith (substitute e1 old_var new_var, substitute e2 old_var new_var)
 
 
 (* Substitution dans les termes du lambda-calcul *)
 let rec substitution (x : string) (n: pterm) (t : pterm) : pterm =
   match t with
-  | Var s -> if s = x then n else t  (* Remplacer la variable x par n *)
+  | Var s -> if s = x then n else t 
   | Abs (s, t1) ->
       if s = x then
         Abs (s, t1)  (* Ne pas remplacer si s est x *)
@@ -143,18 +157,21 @@ let rec substitution (x : string) (n: pterm) (t : pterm) : pterm =
   | Deref t -> Deref (substitution x n t)
   | Assign (t1, t2) -> Assign (substitution x n t1, substitution x n t2)
   | Address _ -> t
+  | Exn -> t 
+  | Raise e -> Raise (substitution x n e)
+  | TryWith (e1, e2) -> TryWith (substitution x n e1, substitution x n e2)
   
 
 (* Une étape de réduction Call-by-Value *)
 let rec ltr_cbv_step (t : pterm) (mem : memory) : (pterm * memory) option =
   match t with
   | Var _ | Abs _ | Int _ | Address _ | Unit -> None
-  | App (Abs (x, t1), t2) when is_value t2 -> 
+  | App (Abs (x, t1), t2) when verify t2 -> 
       Some (substitution x t2 t1, mem)
   | App (t1, t2) -> 
       (match ltr_cbv_step t1 mem with
        | Some (t1', mem') -> Some (App (t1', t2), mem')
-       | None when is_value t1 -> 
+       | None when verify t1 -> 
            (match ltr_cbv_step t2 mem with
             | Some (t2', mem') -> Some (App (t1, t2'), mem')
             | None -> None)
@@ -163,7 +180,7 @@ let rec ltr_cbv_step (t : pterm) (mem : memory) : (pterm * memory) option =
   | Add (t1, t2) -> 
       (match ltr_cbv_step t1 mem with
        | Some (t1', mem') -> Some (Add (t1', t2), mem')
-       | None when is_value t1 -> 
+       | None when verify t1 -> 
            (match ltr_cbv_step t2 mem with
             | Some (t2', mem') -> Some (Add (t1, t2'), mem')
             | None -> None)
@@ -172,7 +189,7 @@ let rec ltr_cbv_step (t : pterm) (mem : memory) : (pterm * memory) option =
   | Sub (t1, t2) -> 
       (match ltr_cbv_step t1 mem with
        | Some (t1', mem') -> Some (Sub (t1', t2), mem')
-       | None when is_value t1 -> 
+       | None when verify t1 -> 
            (match ltr_cbv_step t2 mem with
             | Some (t2', mem') -> Some (Sub (t1, t2'), mem')
             | None -> None)
@@ -181,13 +198,13 @@ let rec ltr_cbv_step (t : pterm) (mem : memory) : (pterm * memory) option =
   | List (t :: ts) -> 
       (match ltr_cbv_step t mem with
        | Some (t', mem') -> Some (List (t' :: ts), mem')
-       | None when is_value t -> 
+       | None when verify t -> 
            (match ltr_cbv_step (List ts) mem with
             | Some (List ts', mem') -> Some (List (t :: ts'), mem')
             | _ -> None)
        | None -> None)
   | Head (List []) -> None
-  | Head (List (t :: _)) when is_value t -> Some (t, mem)
+  | Head (List (t :: _)) when verify t -> Some (t, mem)
   | Head t -> 
       (match ltr_cbv_step t mem with
        | Some (t', mem') -> Some (Head t', mem')
@@ -198,11 +215,11 @@ let rec ltr_cbv_step (t : pterm) (mem : memory) : (pterm * memory) option =
       (match ltr_cbv_step t mem with
        | Some (t', mem') -> Some (Tail t', mem')
        | None -> None)
-  | Cons (t1, List ts) when is_value t1 -> Some (List (t1 :: ts), mem)
+  | Cons (t1, List ts) when verify t1 -> Some (List (t1 :: ts), mem)
   | Cons (t1, t2) -> 
       (match ltr_cbv_step t1 mem with
        | Some (t1', mem') -> Some (Cons (t1', t2), mem')
-       | None when is_value t1 -> 
+       | None when verify t1 -> 
            (match ltr_cbv_step t2 mem with
             | Some (t2', mem') -> Some (Cons (t1, t2'), mem')
             | None -> None)
@@ -225,25 +242,25 @@ let rec ltr_cbv_step (t : pterm) (mem : memory) : (pterm * memory) option =
        | None -> None)
   | Let (x, t1, t2) -> 
       (match ltr_cbv_step t1 mem with
-       | Some (v1, mem') when is_value v1 -> Some (substitution x v1 t2, mem')
+       | Some (v1, mem') when verify v1 -> Some (substitution x v1 t2, mem')
        | Some (t1', mem') -> Some (Let (x, t1', t2), mem')
        | None -> None)
-  | Ref v when is_value v ->
+  | Ref v when verify v ->
       let addr = new_mem () in
       Some (Address addr, (addr, v) :: mem)
   | Ref t ->
       (match ltr_cbv_step t mem with
-       | Some (v, mem') when is_value v -> 
+       | Some (v, mem') when verify v -> 
            let addr = new_mem () in
            Some (Address addr, (addr, v) :: mem')
        | Some (t', mem') -> Some (Ref t', mem')
        | None -> None)
-  | Assign (Address a, v) when is_value v ->
+  | Assign (Address a, v) when verify v ->
       Some (Unit, (a, v) :: List.remove_assoc a mem)
   | Assign (t1, t2) ->
       (match ltr_cbv_step t1 mem with
        | Some (t1', mem') -> Some (Assign (t1', t2), mem')
-       | None when is_value t1 ->
+       | None when verify t1 ->
            (match ltr_cbv_step t2 mem with
             | Some (t2', mem') -> Some (Assign (t1, t2'), mem')
             | None -> None)
@@ -255,19 +272,27 @@ let rec ltr_cbv_step (t : pterm) (mem : memory) : (pterm * memory) option =
       (match ltr_cbv_step t mem with
        | Some (t', mem') -> Some (Deref t', mem')
        | None -> None)
-
-
+  | Raise e ->
+      (match ltr_cbv_step e mem with
+       | Some (e', mem') -> Some (Raise e', mem')
+       | None -> None)
+  | TryWith (Exn, t2) -> Some (t2, mem)
+  | TryWith (t1, t2) ->
+      (match ltr_cbv_step t1 mem with
+       | Some (t1', mem') -> Some (TryWith (t1', t2), mem')
+       | None -> None)
+  | Exn -> None
 
 (* Évaluation complète par normalisation avec gestion de timeout *)
 let ltr_cbv_norm (t : pterm) : pterm * memory =
   let timeout = 1.0 in
   let start_time = Unix.gettimeofday () in
   let initial_memory = [] in
-  let step_counter = ref 0 in (* Add step counter *)
+  let step_counter = ref 0 in 
 
   let rec eval_with_timeout t mem =
     incr step_counter;
-    if !step_counter > 1000 then (* Add maximum step limit *)
+    if !step_counter > 1000 then 
       raise (Failure "Too many reduction steps")
     else if Unix.gettimeofday () -. start_time > timeout then
       raise Timeout
@@ -276,7 +301,7 @@ let ltr_cbv_norm (t : pterm) : pterm * memory =
       | Unit -> (Unit, mem)
       | _ -> 
           match ltr_cbv_step t mem with
-          | Some (t', mem') when t' = t -> (t, mem') (* Stop if no change *)
+          | Some (t', mem') when t' = t -> (t, mem') 
           | Some (t', mem') -> eval_with_timeout t' mem'
           | None -> (t, mem)
     )

@@ -53,7 +53,18 @@ let test_imperative_features () =
     print_endline "-------------------";
   ) examples
 
-(* Run all tests *)
+  let test_exceptions () =
+    (* Test 1: Basic exception raising *)
+    let test1 = ltr_cbv_step (Raise Exn) [] in
+    assert (match test1 with
+      | None -> true  
+      | _ -> false);
+  
+    print_endline "test passed!"
+
 let () =
   print_endline "\n=== Testing Imperative Features ===";
-  test_imperative_features ()
+  test_imperative_features ();
+  print_endline "\n=== Testing Exception Features ===";
+  test_exceptions ()
+

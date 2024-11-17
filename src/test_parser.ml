@@ -32,28 +32,25 @@ let test_parser () =
 
 let test_advanced_parser () =
   let tests = [
-    (* Tests basiques *)
+
     "42", Int 42;
     "x", Var "x";
     "(lambda x. x)", Abs("x", Var "x");
     
-    (* Tests avec let *)
+
     "let x = 42 in x", Let("x", Int 42, Var "x");
     
-    (* Tests avec références *)
     "ref 42", Ref(Int 42);
     "!x", Deref(Var "x");
     "x := 42", Assign(Var "x", Int 42);
     
-    (* Tests avec opérations arithmétiques *)
+
     "1 + 2", Add(Int 1, Int 2);
     "3 - 4", Sub(Int 3, Int 4);
     
-    (* Tests avec listes *)
     "[]", List [];
     "[1, 2, 3]", List [Int 1; Int 2; Int 3];
     
-    (* Tests combinés *)
     "let x = ref 42 in !x + 1",
       Let("x", Ref(Int 42), Add(Deref(Var "x"), Int 1));
   ] in
