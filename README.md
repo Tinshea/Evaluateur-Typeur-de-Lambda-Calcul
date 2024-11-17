@@ -68,7 +68,7 @@ dune exec src/test_name.exe
 - Point fixe (pour la récursion)
 
 ### Système de types
-- Inférence de types à la Hindley-Milner
+- Inférence de types
 - Polymorphisme paramétrique
 - Polymorphisme faible pour les références
 - Occur check pour éviter les types récursifs invalides
