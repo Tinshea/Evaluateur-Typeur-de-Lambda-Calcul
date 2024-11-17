@@ -186,21 +186,26 @@ let test_weak_polymorphism () =
   let id_let = Let ("id", Abs ("x", Var "x"), Var "id") in
   let id_type = infer_type id_let [] in
   (match id_type with
-   | Forall (_, Arr (Tvar x, Tvar y)) when x = y -> ()
+   | Forall (_, Arr (Tvar x, Tvar y)) when x = y -> 
+       Printf.printf "SUCCESS: Non-expansive term properly generalized\n"
    | _ -> 
        Printf.printf "Expected forall T. T->T, got %s\n" (print_type id_type);
        failwith "Non-expansive term not properly generalized");
 
-  (* Test expansive term - should not be generalized *)
+  (* Test expansive term - should NOT be generalized and should fail *)
   let ref_let = Let ("r", 
                     Ref (Abs ("x", Var "x")),
                     Deref (Var "r")) in
-  let ref_type = infer_type ref_let [] in
-  (match ref_type with
-   | Arr (Tvar x, Tvar y) when x = y -> ()
-   | _ -> 
-       Printf.printf "Expected T->T (not generalized), got %s\n" (print_type ref_type);
-       failwith "Expansive term incorrectly generalized");
+  (try
+    let ty = infer_type ref_let [] in
+    Printf.printf "ERROR: Expansive term was incorrectly typed as: %s\n" (print_type ty);
+    failwith "Expansive term was incorrectly generalized"
+  with 
+  | Failure msg when String.starts_with ~prefix:"Cannot generalize" msg -> 
+      Printf.printf "SUCCESS: Correctly rejected expansive term\n"
+  | e -> 
+      Printf.printf "Unexpected error: %s\n" (Printexc.to_string e);
+      raise e);  
 
   print_endline "Weak polymorphism tests passed!"
 
@@ -221,8 +226,31 @@ let test_error_cases () =
 
   print_endline "Error case tests passed!"
 
-  
-(* Run all tests *)
+let test_problematic_list_ref () =
+  let problematic_term = 
+    Let("l", 
+        Ref(List []),  (* ref [] *)
+        Let("_", 
+            Assign(Var "l", List [Abs("x", Var "x")]),  (* l := [λx.x] *)
+            Add(
+              App(Head(Deref(Var "l")), Int 2),  (* (hd !l) 2 *)
+              Int 2
+            )
+        )
+    ) in
+
+  try
+    let ty = infer_type problematic_term [] in
+    Printf.printf "ERROR: Term should be rejected but was typed as: %s\n" (print_type ty);
+    assert false
+  with 
+  | Failure msg -> 
+      Printf.printf "SUCCESS: Problematic term correctly rejected with message: %s\n" msg
+      (* Le test réussit si le terme est rejeté *)
+  | _ ->
+      Printf.printf "ERROR: Term was rejected but with unexpected error\n";
+      assert false
+
 let () =
 
   test_cherche_type ();
@@ -239,6 +267,7 @@ let () =
   test_unit_and_ref ();
   test_weak_polymorphism ();
   test_error_cases ();
+  test_problematic_list_ref ();
   print_endline "All tests passed!";
 
 

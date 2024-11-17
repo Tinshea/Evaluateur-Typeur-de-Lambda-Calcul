@@ -1,4 +1,13 @@
+(ocamllex lexer)
 
+(menhir
+ (modules parser))
+
+; Exécutable pour `test_parser`
+(executable
+ (name test_parser)
+ (modules lambda syntax types lexer parser test_parser)
+ (libraries unix str))
 
 ; Exécutable pour `test_eval`
 (executable

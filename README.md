@@ -1,9 +1,15 @@
-
 # Évaluateur et Typeur de λ-calcul
 
 ## Description
 
-Ce projet a pour objectif de construire un évaluateur et un typeur pour le λ-calcul, un modèle formel de calcul qui est à la base des langages de programmation fonctionnels. Le projet permet de simuler l'exécution de programmes écrits en λ-calcul et de vérifier la validité des types de ces programmes.
+Un évaluateur et typeur pour le λ-calcul étendu avec des références, des listes et le polymorphisme. Le projet implémente un système de types à la Hindley-Milner avec polymorphisme faible pour les références.
+
+## Prérequis
+
+- OCaml (>= 4.13.0)
+- Dune (>= 2.0)
+- Menhir
+- OUnit2 (pour les tests)
 
 ## Structure du Projet
 
@@ -15,44 +21,79 @@ Le projet est organisé en plusieurs fichiers :
   
 - **`eval.ml`** : Contient les fonctions pour évaluer les termes du λ-calcul, y compris la substitution et la réduction selon la stratégie Call-by-Value.
 
-- **`unify.ml`** : Implémente l'algorithme d'unification pour résoudre les équations de typage générées par le typeur.
 
-- **`main.ml`** : Le point d'entrée du programme qui teste l'évaluateur et le typeur sur des exemples de termes.
+## Installation et Compilation
 
-## Installation
+1. Installez les dépendances nécessaires via OPAM :
+   ```bash
+   opam install dune menhir ounit2
+   ```
 
-1. Assurez-vous d'avoir OCaml installé sur votre machine. Vous pouvez installer OCaml via OPAM, le gestionnaire de paquets OCaml.
-   
-2. Clonez ce dépôt sur votre machine :
+2. Clonez le dépôt :
    ```bash
    git clone <URL_DU_DEPOT>
+   cd Evaluateur-Typeur-de-Lambda-Calcul
    ```
 
-3. Naviguez vers le dossier du projet :
+3. Compilez le projet avec dune :
    ```bash
-   cd nom_du_projet
-   ```
-
-4. Compilez les fichiers OCaml :
-   ```bash
-   ocamlc -o evaluateur lambda.ml types.ml eval.ml unify.ml main.ml
+   dune build
    ```
 
 ## Utilisation
 
 Pour exécuter le programme et tester l'évaluateur et le typeur, utilisez la commande suivante :
 ```bash
-./evaluateur
+dune exec src/test_name.exe
 ```
 
-## Exemples
+## Fonctionnalités
 
-Le programme inclut des exemples de termes dans le fichier `main.ml`, où vous pouvez voir comment les termes sont évalués et typés.
+### Types supportés
+- Types simples (→)
+- Types polymorphes (∀)
+- Types de base (Int, Bool)
+- Types références (Ref)
+- Types listes
+- Type Unit
 
-## Contributions
+### Constructions supportées
+- Abstraction (λx.t)
+- Application
+- Let-binding
+- Références (création, déréférencement, assignation)
+- Listes (création, head, tail)
+- Opérations arithmétiques
+- Conditionnelles
+- Point fixe (pour la récursion)
 
-Les contributions sont les bienvenues ! Si vous souhaitez ajouter des fonctionnalités ou corriger des bogues, n'hésitez pas à soumettre une pull request.
+### Système de types
+- Inférence de types à la Hindley-Milner
+- Polymorphisme paramétrique
+- Polymorphisme faible pour les références
+- Occur check pour éviter les types récursifs invalides
+- Gestion des variables de types fraîches
+
+## Tests
+
+Le projet inclut trois suites de tests complètes :
+
+### Tests du Parser (`test_parser.ml`)
+- Vérifie l'analyse syntaxique des termes
+- Tests des constructions de base (lambda, application, let)
+- Tests des références et listes
+- Tests des opérateurs arithmétiques
+
+Pour exécuter :
+
+
+### Remerciements
+
+- **Yanis Tabellout** : Aide précieuse sur la gestion des adresses de la partie 5.1
+- **Tests assistés par IA** : Une partie des tests a été générée et validée avec l'aide de ChatGPT et Claude 3.5
 
 ## Licence
 
 Ce projet est sous licence MIT. Consultez le fichier LICENSE pour plus de détails.
+
+

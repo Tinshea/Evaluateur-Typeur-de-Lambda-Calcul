@@ -1,3 +1,4 @@
-(lang dune 3.7)
-(name Evaluateur-Typeur-de-Lambda-Calcul)
+(lang dune 2.9)
+(name lambda-evaluator)
+(using menhir 2.1)
 

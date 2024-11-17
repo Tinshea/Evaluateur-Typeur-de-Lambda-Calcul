@@ -28,13 +28,13 @@ let rec cherche_type (v : string) (e : env) : ptype =
 let rec is_nonexpansive (term : pterm) : bool =
   match term with
   (* Non-expansive terms *)
-  | Var _ -> true                (* Variables are non-expansive *)
-  | Int _ -> true               (* Integer literals are non-expansive *)
-  | Unit -> true               (* Unit value is non-expansive *) 
-  | Address _ -> true         (* Memory addresses are non-expansive *)
-  | Abs _ -> true            (* Lambda abstractions are non-expansive *)
-  | List [] -> true         (* Empty list is non-expansive *)
-  
+  | Var _ -> true                
+  | Int _ -> true               
+  | Unit -> true                
+  | Address _ -> true          
+  | Abs _ -> true             
+  | List [] -> true          
+
   (* Compound terms - non-expansive if subterms are non-expansive *)
   | Add (t1, t2) | Sub (t1, t2) | Cons (t1, t2) -> 
       is_nonexpansive t1 && is_nonexpansive t2
@@ -42,16 +42,10 @@ let rec is_nonexpansive (term : pterm) : bool =
       List.for_all is_nonexpansive terms
   | IfZero (t1, t2, t3) | IfEmpty (t1, t2, t3) ->
       is_nonexpansive t1 && is_nonexpansive t2 && is_nonexpansive t3
-  
+
   (* Always expansive terms *)
-  | App _ -> false           (* Applications are always expansive *)
-  | Ref _ -> false          (* Reference creation is expansive *)
-  | Deref _ -> false       (* Dereferencing is expansive *)
-  | Assign _ -> false     (* Assignment is expansive *)
-  | Fix _ -> false       (* Fix point is expansive *)
-  | Head _ -> false     (* List operations are expansive *)
-  | Tail _ -> false    (* List operations are expansive *)
-  
+  | App _ | Ref _ | Deref _ | Assign _ | Fix _ | Head _ | Tail _ -> false
+
   (* Let bindings - expansive if e1 is expansive *)
   | Let (_, e1, _) -> is_nonexpansive e1
 
@@ -233,25 +227,26 @@ and generalise_weak (ty : ptype) (env : env) (term : pterm) : ptype =
   if is_nonexpansive term then
     generalise ty env
   else
-    ty
+    let msg = "Cannot generalize type of expansive term: " ^ print_term term in
+    failwith msg
 
 and infer_type (te : pterm) (env : env) : ptype =
-  let ty_cible = Tvar (nouvelle_var_t ()) in
-  let equa = genere_equa te ty_cible env in
-  match resout_systeme equa 1.0 with
-  | Some (_, substitutions) -> 
-      (match te with
-       | Let (x, e1, e2) ->
-           let ty_e1 = infer_type e1 env in
-           let gen_t0 = generalise_weak ty_e1 env e1 in (* Utilise la généralisation faible *)
-           let env2 = (x, gen_t0) :: env in
-           infer_type e2 env2
-       | _ -> 
-           List.fold_left 
-             (fun t (v, sub) -> substitue_type v sub t) 
-             ty_cible 
-             substitutions)
-  | None -> failwith "Type inference failed"
+  match te with
+  | Let (x, e1, e2) ->
+      let ty_e1 = infer_type e1 env in
+      let gen_t0 = generalise_weak ty_e1 env e1 in (* Utilise generalise_weak ici *)
+      let env2 = (x, gen_t0) :: env in
+      infer_type e2 env2
+  | _ -> 
+      let ty_cible = Tvar (nouvelle_var_t ()) in
+      let equa = genere_equa te ty_cible env in
+      match resout_systeme equa 1.0 with
+      | Some (_, substitutions) -> 
+          List.fold_left 
+            (fun t (v, sub) -> substitue_type v sub t) 
+            ty_cible 
+            substitutions
+      | None -> failwith "Type inference failed"
 
 (* Fonction pour généraliser un type à partir d'un environnement *)
 and variables_libres (t : ptype) : string list =
