@@ -1,8 +1,10 @@
 # Évaluateur et Typeur de λ-calcul
 
+Un rapport de projet est situé à la racine du répertoire du projet. Il contient une description détaillée de l'implémentation de l'évaluateur et du typeur pour le λ-calcul pur, ainsi que des explications sur les différentes parties du projet et leur évolution au cours du développement.
+
 ## Description
 
-Un évaluateur et typeur pour le λ-calcul étendu avec des références, des listes et le polymorphisme. Le projet implémente un système de types à la Hindley-Milner avec polymorphisme faible pour les références.
+Un évaluateur et typeur pour le λ-calcul pur.
 
 ## Prérequis
 
@@ -20,6 +22,12 @@ Le projet est organisé en plusieurs fichiers :
 - **`types.ml`** : Définit la représentation des types simples et contient des fonctions pour générer des équations de typage à partir des termes.
   
 - **`eval.ml`** : Contient les fonctions pour évaluer les termes du λ-calcul, y compris la substitution et la réduction selon la stratégie Call-by-Value.
+
+- **`syntax.ml`** : Contient la définition des types simples et les fonctions associées pour générer les équations de typage à partir des termes.
+
+- **`test_types.ml`** : Contient une suite de tests pour vérifier le bon fonctionnement du système de types, y compris les tests pour la généralisation, l'unification et l'inférence de types.
+
+- **`test_eval.ml`** : Contient les tests pour vérifier l'évaluation des termes, incluant les tests pour les fonctionnalités impératives et la gestion des exceptions.
 
 
 ## Installation et Compilation
@@ -44,8 +52,16 @@ Le projet est organisé en plusieurs fichiers :
 
 Pour exécuter le programme et tester l'évaluateur et le typeur, utilisez la commande suivante :
 ```bash
-dune exec src/test_name.exe
+# Exécute les tests du typeur
+dune exec src/test_types.exe
+
+# Exécute les tests de l'évaluateur
+dune exec src/test_eval.exe
+
+# Exécute les tests du parseur/lexeur
+dune exec src/test_parser.exe
 ```
+
 
 ## Fonctionnalités
 
@@ -74,9 +90,9 @@ dune exec src/test_name.exe
 - Occur check pour éviter les types récursifs invalides
 - Gestion des variables de types fraîches
 
-## Ajout Bonus : Parser et Gestion des Exceptions
+## Ajout Bonus : Parser/Lexer et Gestion des Exceptions
 
-### Tests du Parser (`test_parser.ml`)
+### Parser/Lexer
 - Vérifie l'analyse syntaxique des termes
 - Tests des constructions de base (lambda, application, let)
 - Tests des références et listes
@@ -88,12 +104,12 @@ Une gestion partielle des exceptions a également été mise en place, avec des 
 Pour exécuter :
 
 
-### Remerciements
+### Aides et Remerciements
 
 - **Yanis Tabellout** : Pour son aide précieuse dans la gestion des adresses de la partie 5.1.
 - **Tests assistés par IA** : Une partie des tests a été générée et validée avec l'aide de ChatGPT et Claude 3.5.
 - **Débogage assisté** : Le débogage a bénéficié d'une assistance IA pour simplifier et optimiser le code.
-- **Ressource académique** : L'évaluateur de calcul lambda en OCaml, tel que présenté par Christophe Deleuze, a servi de référence technique (disponible [ici](https://raw.githubusercontent.com/wiki/cdeleuze/lambda.ml/lambda.pdf)).
+- **Ressource** : L'évaluateur de calcul lambda en OCaml, tel que présenté par Christophe Deleuze, a servi de référence technique (disponible [ici](https://raw.githubusercontent.com/wiki/cdeleuze/lambda.ml/lambda.pdf)).
 
 
 
