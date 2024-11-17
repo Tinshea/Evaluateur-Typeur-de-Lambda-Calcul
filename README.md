@@ -74,9 +74,7 @@ dune exec src/test_name.exe
 - Occur check pour éviter les types récursifs invalides
 - Gestion des variables de types fraîches
 
-## Tests
-
-Le projet inclut trois suites de tests complètes :
+## Ajout Bonus : Parser et Gestion des Exceptions
 
 ### Tests du Parser (`test_parser.ml`)
 - Vérifie l'analyse syntaxique des termes
@@ -84,16 +82,18 @@ Le projet inclut trois suites de tests complètes :
 - Tests des références et listes
 - Tests des opérateurs arithmétiques
 
+### Gestion des Exceptions
+Une gestion partielle des exceptions a également été mise en place, avec des tests associés dans eval_test.ml.
+
 Pour exécuter :
 
 
 ### Remerciements
 
-- **Yanis Tabellout** : Aide précieuse sur la gestion des adresses de la partie 5.1
-- **Tests assistés par IA** : Une partie des tests a été générée et validée avec l'aide de ChatGPT et Claude 3.5
+- **Yanis Tabellout** : Pour son aide précieuse dans la gestion des adresses de la partie 5.1.
+- **Tests assistés par IA** : Une partie des tests a été générée et validée avec l'aide de ChatGPT et Claude 3.5.
+- **Débogage assisté** : Le débogage a bénéficié d'une assistance IA pour simplifier et optimiser le code.
+- **Ressource académique** : L'évaluateur de calcul lambda en OCaml, tel que présenté par Christophe Deleuze, a servi de référence technique (disponible [ici](https://raw.githubusercontent.com/wiki/cdeleuze/lambda.ml/lambda.pdf)).
 
-## Licence
-
-Ce projet est sous licence MIT. Consultez le fichier LICENSE pour plus de détails.
 
 
