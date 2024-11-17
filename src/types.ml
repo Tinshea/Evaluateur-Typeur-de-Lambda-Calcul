@@ -1,13 +1,10 @@
-(* types.ml *)
-(* Ce fichier contient la définition des types simples et les fonctions associées pour générer les équations de typage à partir des termes. *)
+(* Module de typage *)
 
 open Syntax
 open Lambda
 
-(* Environnement de typage *)
+(* Types de base *)
 type env = (string * ptype) list
-
-(* Type pour les équations de typage *)
 type equa = (ptype * ptype) list
 
 (* Générateur de noms de variables de type *)
@@ -65,7 +62,6 @@ let rec substitue_type (v : string) (sub : ptype) (t : ptype) : ptype =
 let substitue_equa (v : string) (sub : ptype) (eqs : equa) : equa =
   List.map (fun (t1, t2) -> (substitue_type v sub t1, substitue_type v sub t2)) eqs
 
-(* Fonction d'occur check *)
 let rec occur_check (v : string) (t : ptype) : bool =
   match t with
   | Tvar x -> x = v
@@ -134,8 +130,6 @@ let rec unifie (eqs : equa) (substitutions_acc : (string * ptype) list) : (equa 
         | (TUnit, TUnit) ->
             unifie rest substitutions_acc
         | _ -> failwith "Unification échoue : types incompatibles"
-
-
 
 (* Génération des équations de typage *)
 let rec genere_equa t ty e =
@@ -241,7 +235,7 @@ and infer_type (te : pterm) (env : env) : ptype =
   match te with
   | Let (x, e1, e2) ->
       let ty_e1 = infer_type e1 env in
-      let gen_t0 = generalise_weak ty_e1 env e1 in (* Utilise generalise_weak ici *)
+      let gen_t0 = generalise_weak ty_e1 env e1 in 
       let env2 = (x, gen_t0) :: env in
       infer_type e2 env2
   | _ -> 

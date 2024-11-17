@@ -1,13 +1,15 @@
 (* lambda.ml *)
 (* Ce fichier contient la définition des termes du λ-calcul (l'AST), ainsi que certaines fonctions utilitaires comme l'impression de termes. *)
 
-(* Représentation des termes du lambda-calcul *)
+(* Module des termes du λ-calcul *)
+
+(* Type principal représentant les termes *)
 type pterm = 
-  | Var of string             
-  | App of pterm * pterm       
-  | Abs of string * pterm      
-  | Int of int
-  | Add of pterm * pterm
+  | Var of string            
+  | App of pterm * pterm     
+  | Abs of string * pterm     
+  | Int of int               
+  | Add of pterm * pterm      
   | Sub of pterm * pterm
   | List of pterm list
   | Head of pterm
@@ -25,11 +27,11 @@ type pterm =
   | Raise of pterm
   | TryWith of pterm * pterm  
   | Exn  
-(* Pretty-printer des termes *)
+(* Fonctions d'affichage *)
 let rec print_term (t : pterm) : string = 
   match t with
   | Var x -> x
-  | App (t1, t2) -> "(" ^ (print_term t1) ^ " " ^ (print_term t2) ^ ")"
+  | App (t1, t2) -> "(" ^ print_term t1 ^ " " ^ print_term t2 ^ ")"
   | Abs (x, t) -> "(fun " ^ x ^ " -> " ^ (print_term t) ^ ")"
   | Int n -> string_of_int n
   | Add (t1, t2) -> "(" ^ (print_term t1) ^ " + " ^ (print_term t2) ^ ")"
@@ -50,4 +52,3 @@ let rec print_term (t : pterm) : string =
   | Raise t -> "raise " ^ (print_term t)
   | TryWith (t1, t2) -> "try " ^ (print_term t1) ^ " with " ^ (print_term t2)
   | Exn -> "exception"
-  

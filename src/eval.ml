@@ -1,8 +1,13 @@
 (* eval.ml *)
 (* Ce fichier contient les fonctions d’évaluation des termes en suivant la stratégie Call-by-Value, ainsi que la substitution et la réduction. *)
 
+(* Module d'évaluation - Implémentation de la stratégie d'évaluation CBV *)
+
 open Lambda
+
+(* Exceptions et types *)
 exception Timeout
+type memory = (int * pterm) list
 
 (* certaine logique comme l'alpha-conversion l'evalutation etc viennent de Christophe Deleuze : Lambda Calculus Evaluator in OCaml*)
 
@@ -41,8 +46,7 @@ let nouvelle_var () : string =
   compteur_var := !compteur_var + 1;
   "x" ^ string_of_int !compteur_var  
 
-(* Add memory state *)
-type memory = (int * pterm) list
+(* memory state *)
 let mem_counter = ref 0
 let new_mem () : int = 
   mem_counter := !mem_counter + 1;
@@ -54,7 +58,6 @@ let rec verify = function
   | _ -> false
 
 (* Fonction de renommage *)
-
 let rec alphaconv (t : pterm) : pterm =
   match t with
   | Var x -> Var x  
@@ -126,14 +129,14 @@ let rec substitution (x : string) (n: pterm) (t : pterm) : pterm =
   | Var s -> if s = x then n else t 
   | Abs (s, t1) ->
       if s = x then
-        Abs (s, t1)  (* Ne pas remplacer si s est x *)
-      else if List.mem s (fv n) then  (* Si n contient s, renommer pour éviter la capture *)
+        Abs (s, t1)  
+      else if List.mem s (fv n) then  
         let new_var = nouvelle_var () in
-        Abs (new_var, substitution x n (substitution s (Var new_var) t1))  (* Renommer s dans t1 *)
+        Abs (new_var, substitution x n (substitution s (Var new_var) t1)) 
       else
-        Abs (s, substitution x n t1)  (* Appliquer la substitution au corps de l'abstraction *)
+        Abs (s, substitution x n t1)  
   | App (t1, t2) ->
-      App (substitution x n t1, substitution x n t2)  (* Appliquer la substitution aux deux sous-termines *)
+      App (substitution x n t1, substitution x n t2)  
   | Int _ -> t
   | Add (t1, t2) -> Add (substitution x n t1, substitution x n t2)
   | Sub (t1, t2) -> Sub (substitution x n t1, substitution x n t2)
@@ -146,12 +149,12 @@ let rec substitution (x : string) (n: pterm) (t : pterm) : pterm =
   | Fix t -> Fix (substitution x n t)
   | Let (y, t1, t2) -> 
       if y = x then
-        Let (y, substitution x n t1, t2)  (* Ne pas remplacer si y est x *)
-      else if List.mem y (fv n) then  (* Si n contient y, renommer pour éviter la capture *)
+        Let (y, substitution x n t1, t2) 
+      else if List.mem y (fv n) then  
         let new_var = nouvelle_var () in
-        Let (new_var, substitution x n t1, substitution y (Var new_var) t2)  (* Renommer y dans t2 *)
+        Let (new_var, substitution x n t1, substitution y (Var new_var) t2)  
       else
-        Let (y, substitution x n t1, substitution x n t2)  (* Appliquer la substitution au corps de la liaison *)
+        Let (y, substitution x n t1, substitution x n t2)  
   | Unit -> t
   | Ref t -> Ref (substitution x n t)
   | Deref t -> Deref (substitution x n t)
