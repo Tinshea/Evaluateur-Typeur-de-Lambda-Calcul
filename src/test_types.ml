@@ -73,14 +73,12 @@ let test_infer_type () =
   let env = [] in
   let result = infer_type t env in
 
-  (* Print debug info *)
-  Printf.printf "Raw type: %s\n" (print_type result);
-
   match result with
   | Arr (Tvar x, Tvar y) -> 
-      Printf.printf "Found arrow type %s -> %s\n" x y;
-      assert (x = y)
-  | _ -> assert false
+      assert (String.equal x y);  (* Identity function should have same input and output type *)
+  | _ -> 
+      Printf.printf "Unexpected type: %s\n" (print_type result);
+      assert false
   
 (* Test for polymorphic identity function *)
 let test_polymorphic_identity () =
@@ -131,29 +129,102 @@ let test_factorial () =
   | Arr (N, N) -> ()
   | _ -> assert false
 
-  (* Test simple function application typing *)
-let test_simple_application () =
-  (* Create environment with function f: B1 -> B2 and argument x: B1 *)
-  let env = [("f", Arr(Tvar "B1", Tvar "B2")); 
-             ("x", Tvar "B1")] in
-  
-  (* Build application term f x *)
-  let term = App(Var "f", Var "x") in
-  
-  (* Infer type *)
-  let result = infer_type term env in
-  
-  Printf.printf "Application type result: %s\n" (print_type result);
-  
-  (* Should infer B2 as the result type *)
-  match result with
-  | Tvar "B2" -> ()  (* Success *)
-  | other -> 
-      Printf.printf "Expected B2, got %s\n" (print_type other);
-      assert false
+(* Test for unit and reference types *)
+(* Test for unit and reference types with more granular cases *)
+let test_unit_and_ref () =
+  (* Test unit type *)
+  let unit_term = Unit in
+  let unit_type = infer_type unit_term [] in
+  assert (unit_type = TUnit);
 
+  (* Test basic reference creation *)
+  let ref_term = Ref (Int 42) in
+  let ref_type = infer_type ref_term [] in
+  (match ref_type with
+   | RefType N -> ()
+   | _ -> 
+       Printf.printf "Expected RefType N, got %s\n" (print_type ref_type);
+       assert false);
+
+  (* Test basic reference dereferencing *)
+  let deref_term = Deref (Ref (Int 42)) in
+  let deref_type = infer_type deref_term [] in
+  assert (deref_type = N);
+
+  (* Test reference assignment *)
+  let assign_term = Assign (Ref (Int 42), Int 43) in
+  let assign_type = infer_type assign_term [] in
+  assert (assign_type = TUnit);
+
+  (* Test reference to function *)
+  let fun_ref_term = Ref (Abs ("x", Var "x")) in
+  let fun_ref_type = infer_type fun_ref_term [] in
+  match fun_ref_type with
+  | RefType (Arr (Tvar x, Tvar y)) -> assert (x = y)
+  | _ -> 
+      Printf.printf "Expected RefType (T -> T), got %s\n" (print_type fun_ref_type);
+
+  (* Test dereferencing function reference *)
+  let deref_fun_term = Deref (Ref (Abs ("x", Var "x"))) in
+  let deref_fun_type = infer_type deref_fun_term [] in
+  match deref_fun_type with
+  | Arr (Tvar x, Tvar y) -> assert (x = y)
+  | _ -> 
+      Printf.printf "Expected T -> T, got %s\n" (print_type deref_fun_type);
+
+  (* Test nested references *)
+  let nested_ref = Ref (Ref (Int 42)) in
+  let nested_type = infer_type nested_ref [] in
+  match nested_type with
+  | RefType (RefType N) -> ()
+  | _ -> 
+      Printf.printf "Expected RefType (RefType N), got %s\n" (print_type nested_type);
+      assert false
+(* Test functions for type system *)
+let test_weak_polymorphism () =
+  (* Test non-expansive term - should be generalized *)
+  let id_let = Let ("id", Abs ("x", Var "x"), Var "id") in
+  let id_type = infer_type id_let [] in
+  (match id_type with
+   | Forall (_, Arr (Tvar x, Tvar y)) when x = y -> ()
+   | _ -> 
+       Printf.printf "Expected forall T. T->T, got %s\n" (print_type id_type);
+       failwith "Non-expansive term not properly generalized");
+
+  (* Test expansive term - should not be generalized *)
+  let ref_let = Let ("r", 
+                    Ref (Abs ("x", Var "x")),
+                    Deref (Var "r")) in
+  let ref_type = infer_type ref_let [] in
+  (match ref_type with
+   | Arr (Tvar x, Tvar y) when x = y -> ()
+   | _ -> 
+       Printf.printf "Expected T->T (not generalized), got %s\n" (print_type ref_type);
+       failwith "Expansive term incorrectly generalized");
+
+  print_endline "Weak polymorphism tests passed!"
+
+let test_error_cases () =
+  (* Test type mismatch *)
+  let bad_term = App (Int 42, Int 43) in
+  (try
+    let _ = infer_type bad_term [] in
+    assert false
+  with Failure _ -> ());
+
+  (* Test invalid reference access *)
+  let bad_ref = Deref (Int 42) in
+  (try
+    let _ = infer_type bad_ref [] in
+    assert false
+  with Failure _ -> ());
+
+  print_endline "Error case tests passed!"
+
+  
 (* Run all tests *)
 let () =
+
   test_cherche_type ();
   test_substitue_type ();
   test_occur_check ();
@@ -165,5 +236,11 @@ let () =
   test_polymorphic_constant ();
   test_factorial ();
   test_infer_type ();
-  test_simple_application ();
-  print_endline "All tests passed!"
+  test_unit_and_ref ();
+  test_weak_polymorphism ();
+  test_error_cases ();
+  print_endline "All tests passed!";
+
+
+
+

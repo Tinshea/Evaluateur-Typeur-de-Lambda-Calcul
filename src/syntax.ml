@@ -9,6 +9,8 @@ type ptype =
   | Listtype of ptype                (* Type des listes *)
   | Forall of string * ptype     (* Type polymorphe *)
   | Nat        
+  | TUnit                         (* Type unit *)
+  | RefType of ptype                (* Type référence *)
 
 let rec print_type (t : ptype) : string =
   match t with
@@ -18,3 +20,5 @@ let rec print_type (t : ptype) : string =
   | Listtype t -> "(" ^ (print_type t) ^ " list)"
   | Forall (x, t) -> "(forall " ^ x ^ ". " ^ (print_type t) ^ ")"
   | Nat -> "Nat"
+  | TUnit -> "Unit"
+  | RefType t -> "(" ^ (print_type t) ^ " ref)"

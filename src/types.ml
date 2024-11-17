@@ -24,6 +24,37 @@ let rec cherche_type (v : string) (e : env) : ptype =
   | (x, t) :: rest -> if x = v then t else cherche_type v rest
 
 
+(* Vérifie si un terme est non-expansif *)
+let rec is_nonexpansive (term : pterm) : bool =
+  match term with
+  (* Non-expansive terms *)
+  | Var _ -> true                (* Variables are non-expansive *)
+  | Int _ -> true               (* Integer literals are non-expansive *)
+  | Unit -> true               (* Unit value is non-expansive *) 
+  | Address _ -> true         (* Memory addresses are non-expansive *)
+  | Abs _ -> true            (* Lambda abstractions are non-expansive *)
+  | List [] -> true         (* Empty list is non-expansive *)
+  
+  (* Compound terms - non-expansive if subterms are non-expansive *)
+  | Add (t1, t2) | Sub (t1, t2) | Cons (t1, t2) -> 
+      is_nonexpansive t1 && is_nonexpansive t2
+  | List terms -> 
+      List.for_all is_nonexpansive terms
+  | IfZero (t1, t2, t3) | IfEmpty (t1, t2, t3) ->
+      is_nonexpansive t1 && is_nonexpansive t2 && is_nonexpansive t3
+  
+  (* Always expansive terms *)
+  | App _ -> false           (* Applications are always expansive *)
+  | Ref _ -> false          (* Reference creation is expansive *)
+  | Deref _ -> false       (* Dereferencing is expansive *)
+  | Assign _ -> false     (* Assignment is expansive *)
+  | Fix _ -> false       (* Fix point is expansive *)
+  | Head _ -> false     (* List operations are expansive *)
+  | Tail _ -> false    (* List operations are expansive *)
+  
+  (* Let bindings - expansive if e1 is expansive *)
+  | Let (_, e1, _) -> is_nonexpansive e1
+
 (* Fonction de substitution d'une variable de type par un type dans un autre type *)
 let rec substitue_type (v : string) (sub : ptype) (t : ptype) : ptype =
   match t with
@@ -33,6 +64,8 @@ let rec substitue_type (v : string) (sub : ptype) (t : ptype) : ptype =
   | Listtype t1 -> Listtype (substitue_type v sub t1)
   | Forall (x, t1) -> if x = v then t else Forall (x, substitue_type v sub t1)
   | Nat -> t
+  | TUnit -> t
+  | RefType t1 -> RefType (substitue_type v sub t1)
 
 (* Fonction de substitution d'une variable de type par un type dans un système d'équations *)
 let substitue_equa (v : string) (sub : ptype) (eqs : equa) : equa =
@@ -47,6 +80,8 @@ let rec occur_check (v : string) (t : ptype) : bool =
   | Listtype t -> occur_check v t
   | Forall (x, t) -> x <> v && occur_check v t
   | Nat -> false
+  | TUnit -> false
+  | RefType t -> occur_check v t
 
 
 (* Fonction de renommage des variables de type liées (barendregtisation) *)
@@ -60,6 +95,8 @@ let rec barendregtisation (t : ptype) (env : (string * string) list) : ptype =
       Forall (new_var, barendregtisation t ((x, new_var) :: env))
   | Nat -> Nat
   | N -> N
+  | TUnit -> TUnit
+  | RefType t -> RefType (barendregtisation t env)
 
 
 (* Fonction pour ouvrir un type universel *)
@@ -96,6 +133,10 @@ let rec unifie (eqs : equa) (substitutions_acc : (string * ptype) list) : (equa 
         | (t1, Forall (_, t2)) ->
             let t2' = barendregtisation t2 [] in
             unifie ((t1, ouvrir t2') :: rest) substitutions_acc
+        | (RefType t1, RefType t2) ->
+            unifie ((t1, t2) :: rest) substitutions_acc
+        | (TUnit, TUnit) ->
+            unifie rest substitutions_acc
         | _ -> failwith "Unification échoue : types incompatibles"
 
 
@@ -145,6 +186,17 @@ let rec genere_equa t ty e =
       let gen_t0 = generalise ty_e1 e in
       let env2 = (x, gen_t0) :: e in
       genere_equa e2 ty env2
+  | Unit -> [(ty, TUnit)]
+  | Ref t -> 
+      let t' = Tvar (nouvelle_var_t ()) in
+      genere_equa t t' e @ [(ty, RefType t')]
+  | Deref t ->
+      let t' = Tvar (nouvelle_var_t ()) in
+      genere_equa t (RefType t') e @ [(ty, t')]
+  | Assign (t1, t2) ->
+      let t' = Tvar (nouvelle_var_t ()) in
+      genere_equa t1 (RefType t') e @ genere_equa t2 t' e @ [(ty, TUnit)]
+  | Address _ -> [(ty, N)]
 
 (* Return both equations and substitutions *)
 and resout_systeme (eqs : equa) (timeout : float) : (equa * (string * ptype) list) option =
@@ -167,16 +219,38 @@ and resout_systeme (eqs : equa) (timeout : float) : (equa * (string * ptype) lis
   loop eqs []
 
 (* Apply substitutions *)
+(* Modifie infer_type pour utiliser la généralisation faible *)
+and generalise (t : ptype) (e : env) : ptype =
+  let env_vars = List.map fst e in
+  let libres = variables_libres t in
+  let libres_hors_env = List.filter (fun x -> not (List.mem x env_vars)) libres in
+  let result = List.fold_right (fun x acc -> Forall (x, acc)) libres_hors_env t in
+  result
+
+
+(* Modifie la généralisation pour n'autoriser que les termes non-expansifs *)
+and generalise_weak (ty : ptype) (env : env) (term : pterm) : ptype =
+  if is_nonexpansive term then
+    generalise ty env
+  else
+    ty
+
 and infer_type (te : pterm) (env : env) : ptype =
   let ty_cible = Tvar (nouvelle_var_t ()) in
   let equa = genere_equa te ty_cible env in
   match resout_systeme equa 1.0 with
   | Some (_, substitutions) -> 
-      (* Just apply substitutions without generalization for non-Let bindings *)
-      List.fold_left 
-        (fun t (v, sub) -> substitue_type v sub t) 
-        ty_cible 
-        substitutions
+      (match te with
+       | Let (x, e1, e2) ->
+           let ty_e1 = infer_type e1 env in
+           let gen_t0 = generalise_weak ty_e1 env e1 in (* Utilise la généralisation faible *)
+           let env2 = (x, gen_t0) :: env in
+           infer_type e2 env2
+       | _ -> 
+           List.fold_left 
+             (fun t (v, sub) -> substitue_type v sub t) 
+             ty_cible 
+             substitutions)
   | None -> failwith "Type inference failed"
 
 (* Fonction pour généraliser un type à partir d'un environnement *)
@@ -190,16 +264,13 @@ and variables_libres (t : ptype) : string list =
         List.filter (fun y -> y <> x) inner_vars
     | Nat -> []
     | N -> []
+    | TUnit -> []
+    | RefType t -> collect t
   in
   (* Remove duplicates using sort_uniq *)
   List.sort_uniq String.compare (collect t)
 
-and generalise (t : ptype) (e : env) : ptype =
-  let env_vars = List.map fst e in
-  let libres = variables_libres t in
-  let libres_hors_env = List.filter (fun x -> not (List.mem x env_vars)) libres in
-  let result = List.fold_right (fun x acc -> Forall (x, acc)) libres_hors_env t in
-  result
+
 
 
 
