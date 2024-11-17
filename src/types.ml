@@ -1,3 +1,5 @@
+(* Ce fichier contient la définition des types et les fonctions associées pour le typage et l'unification dans le lambda-calcul. *)
+
 (* Module de typage *)
 
 open Syntax
